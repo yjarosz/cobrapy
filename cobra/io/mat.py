@@ -28,6 +28,14 @@ def _cell(x):
     return array(x, dtype=np_object)
 
 
+def _set_value_on_object(matrix, obj, name, index):
+    #value = matrix[name][0, 0][index][0]
+    value = matrix[name][0][0][index][0]
+    if value and value.dtype.name != 'int16':
+        value = value[0]
+    setattr(obj, name, value)
+
+
 def load_matlab_model(infile_path, variable_name=None):
     """Load a cobra model stored as a .mat file
 
@@ -70,12 +78,16 @@ def load_matlab_model(infile_path, variable_name=None):
         else:
             model.id = possible_name
         model.description = model.id
+        metabolite_attributes = [name for name in m.dtype.names if name.startswith('met') and name not in ['mets', 'metNames', 'metFormulas']]
         for i, name in enumerate(m["mets"][0, 0]):
             new_metabolite = Metabolite()
             new_metabolite.id = str(name[0][0])
             try:
                 new_metabolite.name = str(m["metNames"][0, 0][i][0][0])
                 new_metabolite.formula = Formula(str(m["metFormulas"][0][0][i][0][0]))
+                # load other attribute that begin by 'met'
+                for name in metabolite_attributes:
+                    _set_value_on_object(m, new_metabolite, name, i)
             except:
                 pass
             model.add_metabolites([new_metabolite])
